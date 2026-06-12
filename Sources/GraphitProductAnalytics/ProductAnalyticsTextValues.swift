@@ -22,6 +22,24 @@ public struct ProductAnalyticsEventName: RawRepresentable, Hashable, Codable, Se
         self.rawValue = rawValue
     }
 
+    /// Decodes an event name from a single string without semantic validation.
+    ///
+    /// Event construction validates event names before accepting an event.
+    ///
+    /// - Parameter decoder: The decoder providing the single-string event name representation.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        self.rawValue = try container.decode(String.self)
+    }
+
+    /// Encodes the event name as a single string.
+    ///
+    /// - Parameter encoder: The encoder that receives the single-string event name representation.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
+    }
+
     /// The app-defined event name text.
     public var description: String {
         rawValue
@@ -50,6 +68,24 @@ public struct ProductAnalyticsPropertyKey: RawRepresentable, Hashable, Codable, 
     /// - Parameter rawValue: The property key exactly as provided by the caller.
     public init(rawValue: String) {
         self.rawValue = rawValue
+    }
+
+    /// Decodes a property key from a single string without semantic validation.
+    ///
+    /// Properties construction validates keys before accepting a property collection.
+    ///
+    /// - Parameter decoder: The decoder providing the single-string property key representation.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        self.rawValue = try container.decode(String.self)
+    }
+
+    /// Encodes the property key as a single string.
+    ///
+    /// - Parameter encoder: The encoder that receives the single-string property key representation.
+    public func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(rawValue)
     }
 
     /// The app-defined property key text.
