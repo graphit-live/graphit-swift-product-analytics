@@ -30,6 +30,9 @@ public struct ProductAnalyticsEvent: Hashable, Codable, Sendable {
         occurredAt: Date,
         properties: ProductAnalyticsProperties = .empty
     ) throws {
+        try ProductAnalyticsValidation.validateEventName(name)
+        try ProductAnalyticsValidation.validateFiniteOccurrenceDate(occurredAt)
+
         self.name = name
         self.occurredAt = occurredAt
         self.properties = properties
@@ -49,10 +52,58 @@ public struct ProductAnalyticsEvent: Hashable, Codable, Sendable {
         occurredAt: Date,
         properties: [ProductAnalyticsPropertyKey: ProductAnalyticsPropertyValue]
     ) throws {
-        try self.init(
-            name: name,
-            occurredAt: occurredAt,
-            properties: ProductAnalyticsProperties(properties)
-        )
+        try ProductAnalyticsValidation.validateEventName(name)
+        try ProductAnalyticsValidation.validateFiniteOccurrenceDate(occurredAt)
+
+        self.name = name
+        self.occurredAt = occurredAt
+        self.properties = try ProductAnalyticsProperties(properties)
     }
+
+    /// Decodes an event from an object containing `name`, `occurredAt`, and `properties`.
+    ///
+    /// Decoding validates the event name, occurrence time, and decoded properties before
+    /// returning an event value.
+    ///
+    /// - Parameter decoder: The decoder providing the object-shaped event representation.
+    /// - Throws: `ProductAnalyticsError.invalidEvent` when the decoded event name or occurrence
+    ///   time is invalid, `ProductAnalyticsError.invalidProperties` when decoded properties are
+    ///   invalid, or `DecodingError` for structural decoding failures.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let name = try container.decode(ProductAnalyticsEventName.self, forKey: .name)
+        let occurredAt = try container.decode(Date.self, forKey: .occurredAt)
+
+        try ProductAnalyticsValidation.validateEventName(name)
+        try ProductAnalyticsValidation.validateFiniteOccurrenceDate(occurredAt)
+
+        self.name = name
+        self.occurredAt = occurredAt
+        self.properties = try container.decode(ProductAnalyticsProperties.self, forKey: .properties)
+    }
+
+    /// Encodes the event as an object containing `name`, `occurredAt`, and `properties`.
+    ///
+    /// The occurrence time uses the encoder's normal `Date` strategy. Encoding does not
+    /// send, queue, persist, or otherwise deliver the event.
+    ///
+    /// - Parameter encoder: The encoder that receives the object-shaped event representation.
+    /// - Throws: `ProductAnalyticsError.invalidEvent` if this event violates event validation
+    ///   rules, or `ProductAnalyticsError.invalidProperties` if its properties violate property
+    ///   validation rules.
+    public func encode(to encoder: any Encoder) throws {
+        try ProductAnalyticsValidation.validateEventName(name)
+        try ProductAnalyticsValidation.validateFiniteOccurrenceDate(occurredAt)
+
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(name, forKey: .name)
+        try container.encode(occurredAt, forKey: .occurredAt)
+        try container.encode(properties, forKey: .properties)
+    }
+}
+
+private enum CodingKeys: String, CodingKey {
+    case name
+    case occurredAt
+    case properties
 }

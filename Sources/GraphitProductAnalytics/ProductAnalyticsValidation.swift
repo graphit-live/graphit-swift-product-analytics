@@ -33,6 +33,18 @@ enum ProductAnalyticsValidation {
         }
     }
 
+    static func validateBatchEvents(_ events: [ProductAnalyticsEvent]) throws {
+        guard !events.isEmpty else {
+            throw ProductAnalyticsError.invalidBatch("batch must contain at least one event")
+        }
+
+        guard events.count <= batchMaximumEventCount else {
+            throw ProductAnalyticsError.invalidBatch(
+                "batch must contain no more than \(batchMaximumEventCount) events"
+            )
+        }
+    }
+
     static func validateProperties(
         _ values: [ProductAnalyticsPropertyKey: ProductAnalyticsPropertyValue]
     ) throws {

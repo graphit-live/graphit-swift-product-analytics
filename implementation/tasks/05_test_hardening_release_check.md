@@ -17,6 +17,7 @@ If implementation shifts from this task/spec, stop and align before continuing.
 
 - Remove low-value duplicate tests.
 - Add missing high-signal tests from `implementation/04_testing_strategy.md`.
+- Add exact boundary tests for v1 limits, including batch counts: one event valid, exactly 1,000 events valid, empty invalid, and 1,001 events invalid.
 - Audit public API for accidental deferred types, protocols, helpers, or conveniences.
 - Audit imports to ensure `Sources/GraphitProductAnalytics` does not import UI, networking, storage, GraphitCache, OSLog, or vendor packages.
 - Audit for accidental globals, singleton state, service locators, property wrappers, macros, dynamic member lookup, provider seams, cache APIs, tasks, actors, locks, streams, continuations, or background work.
