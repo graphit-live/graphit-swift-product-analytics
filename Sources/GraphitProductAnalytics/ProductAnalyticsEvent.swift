@@ -3,10 +3,17 @@ import Foundation
 /// A validated immutable product analytics event value.
 ///
 /// An event contains an app-defined name, an explicit occurrence time, and validated
-/// event properties. The core package only describes the event value; it does not
-/// send, queue, persist, or enrich events.
+/// event properties. Event construction and decoding validate the event name and
+/// occurrence time. The Codable representation is an object with `name`, `occurredAt`,
+/// and `properties` fields, using the encoder or decoder's normal `Date` strategy.
+///
+/// The core package only describes the event value; it does not read the clock, send,
+/// queue, persist, enrich, identify users, start sessions, or observe app lifecycle.
 public struct ProductAnalyticsEvent: Hashable, Codable, Sendable {
     /// The app-defined product analytics event name.
+    ///
+    /// Event names are schema identifiers. Avoid secrets, tokens, raw private
+    /// identifiers, or sensitive user data in this value.
     public let name: ProductAnalyticsEventName
 
     /// The explicit time at which the event occurred.
@@ -15,6 +22,9 @@ public struct ProductAnalyticsEvent: Hashable, Codable, Sendable {
     public let occurredAt: Date
 
     /// The validated event properties associated with the event.
+    ///
+    /// The core package stores these properties as an immutable value only. It does
+    /// not redact, persist, send, or attach provider-specific metadata.
     public let properties: ProductAnalyticsProperties
 
     /// Creates a product analytics event from a name, explicit occurrence time, and properties.

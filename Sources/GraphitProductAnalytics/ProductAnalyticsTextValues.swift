@@ -3,9 +3,16 @@
 /// Use `ProductAnalyticsEventName` instead of a raw string at API boundaries so
 /// event names cannot be accidentally mixed with property keys or unrelated text.
 /// Construction and standalone decoding do not validate the raw value; event
-/// construction validates event names before an event is accepted.
+/// construction validates event names before an event is accepted. The Codable
+/// representation is a single string.
+///
+/// Event names are app schema. Do not put secrets, tokens, raw private identifiers,
+/// or sensitive user data in event names.
 public struct ProductAnalyticsEventName: RawRepresentable, Hashable, Codable, Sendable, CustomStringConvertible {
     /// The underlying app-defined event name.
+    ///
+    /// This value is returned exactly as supplied by the caller. No trimming,
+    /// normalization, lowercasing, or validation happens during leaf construction.
     public let rawValue: String
 
     /// Creates an event name from an app-defined raw value without validation.
@@ -51,9 +58,16 @@ public struct ProductAnalyticsEventName: RawRepresentable, Hashable, Codable, Se
 /// Use `ProductAnalyticsPropertyKey` instead of a raw string at API boundaries so
 /// property keys cannot be accidentally mixed with event names or unrelated text.
 /// Construction and standalone decoding do not validate the raw value; properties
-/// construction validates keys before properties are accepted.
+/// construction validates keys before properties are accepted. The Codable
+/// representation is a single string.
+///
+/// Property keys are app schema. Do not put secrets, tokens, raw private identifiers,
+/// or sensitive user data in property keys.
 public struct ProductAnalyticsPropertyKey: RawRepresentable, Hashable, Codable, Sendable, CustomStringConvertible {
     /// The underlying app-defined property key.
+    ///
+    /// This value is returned exactly as supplied by the caller. No trimming,
+    /// normalization, lowercasing, or validation happens during leaf construction.
     public let rawValue: String
 
     /// Creates a property key from an app-defined raw value without validation.

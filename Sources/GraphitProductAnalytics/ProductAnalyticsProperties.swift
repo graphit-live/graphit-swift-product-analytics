@@ -1,12 +1,21 @@
 /// A validated immutable collection of product analytics event properties.
 ///
 /// Properties are keyed by `ProductAnalyticsPropertyKey` and contain JSON-shaped
-/// `ProductAnalyticsPropertyValue` values. Property order is not semantic.
+/// `ProductAnalyticsPropertyValue` values. Construction and decoding validate keys,
+/// values, object width, array width, string length, number finiteness, and nesting
+/// depth. Property order is not semantic.
+///
+/// The Codable representation is a JSON object keyed by each property key's raw value.
+/// The core package does not assign provider-specific meaning to any key and does not
+/// send, queue, persist, redact, or log property values.
 public struct ProductAnalyticsProperties: Hashable, Codable, Sendable {
     /// A prevalidated empty property collection.
     public static let empty = ProductAnalyticsProperties(unchecked: [:])
 
-    /// The underlying property values keyed by app-defined property keys.
+    /// The validated property values keyed by app-defined property keys.
+    ///
+    /// Treat this dictionary as an immutable snapshot. Dictionary iteration order is
+    /// not semantic and should not be used as an analytics contract.
     public let values: [ProductAnalyticsPropertyKey: ProductAnalyticsPropertyValue]
 
     /// Creates analytics properties from app-defined key-value pairs.
@@ -47,6 +56,9 @@ public struct ProductAnalyticsProperties: Hashable, Codable, Sendable {
     }
 
     /// Returns the value for the supplied property key, if one is present.
+    ///
+    /// Lookup is synchronous and reads only this immutable value; it performs no I/O,
+    /// logging, provider mapping, or normalization.
     ///
     /// - Parameter key: The app-defined property key to look up.
     public subscript(_ key: ProductAnalyticsPropertyKey) -> ProductAnalyticsPropertyValue? {

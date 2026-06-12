@@ -2,7 +2,12 @@
 ///
 /// Values are intentionally explicit instead of `[String: Any]`. Case construction
 /// is nonvalidating; property and standalone Codable boundaries validate values
-/// before accepting or serializing them.
+/// before accepting or serializing them. The Codable representation is JSON-shaped:
+/// null, Boolean, number, string, array, or object.
+///
+/// Property values may contain user-visible or private application data. The core
+/// package validates structure but does not redact, normalize, inspect for privacy,
+/// log, send, queue, or persist values.
 public indirect enum ProductAnalyticsPropertyValue: Hashable, Codable, Sendable {
     /// A JSON null value.
     case null
@@ -16,12 +21,14 @@ public indirect enum ProductAnalyticsPropertyValue: Hashable, Codable, Sendable 
     case number(Double)
 
     /// A JSON string value.
+    ///
+    /// Strings are not parsed as numbers and are not redacted, trimmed, or normalized.
     case string(String)
 
     /// A JSON array of analytics property values.
     case array([ProductAnalyticsPropertyValue])
 
-    /// A JSON object represented by analytics properties.
+    /// A JSON object represented by validated analytics properties.
     case object(ProductAnalyticsProperties)
 
     /// Decodes a JSON-shaped property value and validates it as a root property value.
