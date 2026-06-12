@@ -33,9 +33,86 @@ enum ProductAnalyticsValidation {
         }
     }
 
+    static func validateProperties(
+        _ values: [ProductAnalyticsPropertyKey: ProductAnalyticsPropertyValue]
+    ) throws {
+        try validatePropertyObject(values, valueDepth: 0)
+    }
+
+    static func validatePropertyValue(_ value: ProductAnalyticsPropertyValue) throws {
+        try validatePropertyValue(value, currentDepth: 0)
+    }
+
     static func containsControlScalar(_ value: String) -> Bool {
         value.unicodeScalars.contains { scalar in
             scalar.value <= 0x1F || scalar.value == 0x7F || (0x80...0x9F).contains(scalar.value)
+        }
+    }
+
+    private static func validatePropertyObject(
+        _ values: [ProductAnalyticsPropertyKey: ProductAnalyticsPropertyValue],
+        valueDepth: Int
+    ) throws {
+        guard values.count <= propertyCollectionMaximumElementCount else {
+            throw ProductAnalyticsError.invalidProperties(
+                "property objects must contain no more than \(propertyCollectionMaximumElementCount) properties"
+            )
+        }
+
+        for key in values.keys.sorted(by: { $0.rawValue < $1.rawValue }) {
+            try validatePropertyKey(key)
+            if let value = values[key] {
+                try validatePropertyValue(value, currentDepth: valueDepth)
+            }
+        }
+    }
+
+    private static func validatePropertyValue(
+        _ value: ProductAnalyticsPropertyValue,
+        currentDepth: Int
+    ) throws {
+        switch value {
+        case .null, .bool:
+            return
+
+        case .number(let number):
+            guard number.isFinite else {
+                throw ProductAnalyticsError.invalidProperties("number property values must be finite")
+            }
+
+        case .string(let string):
+            guard string.count <= propertyStringMaximumLength else {
+                throw ProductAnalyticsError.invalidProperties(
+                    "string property values must be no longer than \(propertyStringMaximumLength) characters"
+                )
+            }
+
+        case .array(let values):
+            let arrayDepth = currentDepth + 1
+            try validatePropertyContainerDepth(arrayDepth)
+
+            guard values.count <= propertyCollectionMaximumElementCount else {
+                throw ProductAnalyticsError.invalidProperties(
+                    "property arrays must contain no more than \(propertyCollectionMaximumElementCount) elements"
+                )
+            }
+
+            for element in values {
+                try validatePropertyValue(element, currentDepth: arrayDepth)
+            }
+
+        case .object(let properties):
+            let objectDepth = currentDepth + 1
+            try validatePropertyContainerDepth(objectDepth)
+            try validatePropertyObject(properties.values, valueDepth: objectDepth)
+        }
+    }
+
+    private static func validatePropertyContainerDepth(_ depth: Int) throws {
+        guard depth <= propertyMaximumDepth else {
+            throw ProductAnalyticsError.invalidProperties(
+                "nested property arrays and objects must not exceed depth \(propertyMaximumDepth)"
+            )
         }
     }
 

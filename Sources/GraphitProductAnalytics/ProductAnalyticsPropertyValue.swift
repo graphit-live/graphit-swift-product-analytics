@@ -23,4 +23,95 @@ public indirect enum ProductAnalyticsPropertyValue: Hashable, Codable, Sendable 
 
     /// A JSON object represented by analytics properties.
     case object(ProductAnalyticsProperties)
+
+    /// Decodes a JSON-shaped property value and validates it as a root property value.
+    ///
+    /// Decoding is type-preserving: JSON strings remain strings and JSON numbers remain
+    /// numbers. Semantic validation failures throw `ProductAnalyticsError.invalidProperties`.
+    ///
+    /// - Parameter decoder: The decoder providing the JSON-shaped property value.
+    /// - Throws: `ProductAnalyticsError.invalidProperties` when the decoded value violates
+    ///   property value limits, or `DecodingError` for structural decoding failures.
+    public init(from decoder: any Decoder) throws {
+        let value = try Self.decodeUnchecked(from: decoder)
+        try ProductAnalyticsValidation.validatePropertyValue(value)
+        self = value
+    }
+
+    /// Encodes the property value as JSON-shaped data after validating it as a root value.
+    ///
+    /// - Parameter encoder: The encoder that receives the JSON-shaped property value.
+    /// - Throws: `ProductAnalyticsError.invalidProperties` when this value violates property
+    ///   value limits.
+    public func encode(to encoder: any Encoder) throws {
+        try ProductAnalyticsValidation.validatePropertyValue(self)
+        try encodeUnchecked(to: encoder)
+    }
+}
+
+extension ProductAnalyticsPropertyValue {
+    static func decodeUnchecked(from decoder: any Decoder) throws -> ProductAnalyticsPropertyValue {
+        let singleValueContainer = try decoder.singleValueContainer()
+
+        if singleValueContainer.decodeNil() {
+            return .null
+        }
+
+        if let bool = try? singleValueContainer.decode(Bool.self) {
+            return .bool(bool)
+        }
+
+        if let string = try? singleValueContainer.decode(String.self) {
+            return .string(string)
+        }
+
+        if let number = try? singleValueContainer.decode(Double.self) {
+            return .number(number)
+        }
+
+        if var unkeyedContainer = try? decoder.unkeyedContainer() {
+            var values: [ProductAnalyticsPropertyValue] = []
+            if let count = unkeyedContainer.count {
+                values.reserveCapacity(count)
+            }
+
+            while !unkeyedContainer.isAtEnd {
+                let elementDecoder = try unkeyedContainer.superDecoder()
+                values.append(try decodeUnchecked(from: elementDecoder))
+            }
+
+            return .array(values)
+        }
+
+        return .object(try ProductAnalyticsProperties.decodeUnchecked(from: decoder))
+    }
+
+    func encodeUnchecked(to encoder: any Encoder) throws {
+        switch self {
+        case .null:
+            var container = encoder.singleValueContainer()
+            try container.encodeNil()
+
+        case .bool(let bool):
+            var container = encoder.singleValueContainer()
+            try container.encode(bool)
+
+        case .number(let number):
+            var container = encoder.singleValueContainer()
+            try container.encode(number)
+
+        case .string(let string):
+            var container = encoder.singleValueContainer()
+            try container.encode(string)
+
+        case .array(let values):
+            var container = encoder.unkeyedContainer()
+            for value in values {
+                try value.encodeUnchecked(to: container.superEncoder())
+            }
+
+        case .object(let properties):
+            try properties.encodeUnchecked(to: encoder)
+        }
+    }
 }
