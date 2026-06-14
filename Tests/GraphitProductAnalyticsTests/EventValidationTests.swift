@@ -40,7 +40,25 @@ struct EventValidationTests {
         }
     }
 
-    @Test("invalid event names are rejected")
+    @Test("event name length boundary is enforced when constructing events")
+    func eventNameLengthBoundary() throws {
+        let maximumName = ProductAnalyticsEventName(String(repeating: "e", count: 256))
+        let event = try ProductAnalyticsEvent(
+            name: maximumName,
+            occurredAt: Date(timeIntervalSinceReferenceDate: 0)
+        )
+
+        #expect(event.name == maximumName)
+
+        try expectInvalidEvent {
+            _ = try ProductAnalyticsEvent(
+                name: ProductAnalyticsEventName(String(repeating: "e", count: 257)),
+                occurredAt: Date(timeIntervalSinceReferenceDate: 0)
+            )
+        }
+    }
+
+    @Test("empty and control-scalar event names are rejected")
     func invalidEventNamesAreRejected() throws {
         try expectInvalidEvent {
             _ = try ProductAnalyticsEvent(
@@ -56,7 +74,13 @@ struct EventValidationTests {
         }
         try expectInvalidEvent {
             _ = try ProductAnalyticsEvent(
-                name: ProductAnalyticsEventName(String(repeating: "e", count: 257)),
+                name: ProductAnalyticsEventName("signup\u{007F}completed"),
+                occurredAt: Date(timeIntervalSinceReferenceDate: 0)
+            )
+        }
+        try expectInvalidEvent {
+            _ = try ProductAnalyticsEvent(
+                name: ProductAnalyticsEventName("signup\u{009F}completed"),
                 occurredAt: Date(timeIntervalSinceReferenceDate: 0)
             )
         }

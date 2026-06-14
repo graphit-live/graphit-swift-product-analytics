@@ -43,7 +43,21 @@ struct PropertiesValidationTests {
         #expect(properties[missing] == nil)
     }
 
-    @Test("invalid property keys are rejected by properties")
+    @Test("property key length boundary is enforced by properties")
+    func propertyKeyLengthBoundary() throws {
+        let maximumKey = ProductAnalyticsPropertyKey(String(repeating: "k", count: 256))
+        let properties = try ProductAnalyticsProperties([maximumKey: .null])
+
+        #expect(properties[maximumKey] == .null)
+
+        try expectInvalidProperties {
+            _ = try ProductAnalyticsProperties([
+                ProductAnalyticsPropertyKey(String(repeating: "k", count: 257)): .null
+            ])
+        }
+    }
+
+    @Test("empty and control-scalar property keys are rejected by properties")
     func invalidPropertyKeysAreRejected() throws {
         try expectInvalidProperties {
             _ = try ProductAnalyticsProperties([ProductAnalyticsPropertyKey(""): .null])
@@ -52,9 +66,10 @@ struct PropertiesValidationTests {
             _ = try ProductAnalyticsProperties([ProductAnalyticsPropertyKey("pl\u{0000}an"): .null])
         }
         try expectInvalidProperties {
-            _ = try ProductAnalyticsProperties([
-                ProductAnalyticsPropertyKey(String(repeating: "k", count: 257)): .null
-            ])
+            _ = try ProductAnalyticsProperties([ProductAnalyticsPropertyKey("pl\u{007F}an"): .null])
+        }
+        try expectInvalidProperties {
+            _ = try ProductAnalyticsProperties([ProductAnalyticsPropertyKey("pl\u{009F}an"): .null])
         }
     }
 
@@ -71,14 +86,25 @@ struct PropertiesValidationTests {
         }
     }
 
-    @Test("too-long string values are rejected without echoing raw values")
-    func tooLongStringValuesAreRejectedAndSanitized() throws {
+    @Test("string value length boundary is enforced without echoing raw values")
+    func stringValueLengthBoundaryAndSanitization() throws {
+        let key = ProductAnalyticsPropertyKey("value")
+        let maximumValue = String(repeating: "x", count: 8_192)
+        let valid = try ProductAnalyticsProperties([key: .string(maximumValue)])
+
+        #expect(valid[key] == .string(maximumValue))
+
         let rawValue = "super-secret-token-" + String(repeating: "x", count: 8_193)
 
         do {
             _ = try ProductAnalyticsProperties([ProductAnalyticsPropertyKey("secret"): .string(rawValue)])
             Issue.record("Expected properties construction to fail")
         } catch let error as ProductAnalyticsError {
+            guard case .invalidProperties = error else {
+                Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
+                return
+            }
+
             #expect(error.description.contains("Invalid product analytics properties:"))
             #expect(!error.description.contains(rawValue))
             #expect(!error.description.contains("super-secret-token"))
@@ -87,21 +113,27 @@ struct PropertiesValidationTests {
         }
     }
 
-    @Test("too-wide arrays and objects are rejected")
-    func tooWideArraysAndObjectsAreRejected() throws {
+    @Test("array and object width boundaries are enforced")
+    func arrayAndObjectWidthBoundaries() throws {
+        let items = ProductAnalyticsPropertyKey("items")
+        let maximumArray = Array(repeating: ProductAnalyticsPropertyValue.null, count: 100)
+        let validArrayProperties = try ProductAnalyticsProperties([items: .array(maximumArray)])
+
+        #expect(validArrayProperties[items] == .array(maximumArray))
+
         try expectInvalidProperties {
             _ = try ProductAnalyticsProperties([
-                ProductAnalyticsPropertyKey("items"): .array(Array(repeating: .null, count: 101))
+                items: .array(Array(repeating: .null, count: 101))
             ])
         }
 
-        let tooManyProperties = Dictionary(
-            uniqueKeysWithValues: (0..<101).map { index in
-                (ProductAnalyticsPropertyKey("key\(index)"), ProductAnalyticsPropertyValue.null)
-            }
-        )
+        let maximumProperties = makeProperties(count: 100)
+        let validObject = try ProductAnalyticsProperties(maximumProperties)
+
+        #expect(validObject.values.count == 100)
+
         try expectInvalidProperties {
-            _ = try ProductAnalyticsProperties(tooManyProperties)
+            _ = try ProductAnalyticsProperties(makeProperties(count: 101))
         }
     }
 
@@ -149,6 +181,11 @@ private func expectInvalidProperties(_ operation: () throws -> Void) throws {
         try operation()
         Issue.record("Expected invalid properties failure")
     } catch let error as ProductAnalyticsError {
+        guard case .invalidProperties = error else {
+            Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
+            return
+        }
+
         #expect(error.description.contains("Invalid product analytics properties:"))
     } catch {
         Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
@@ -160,10 +197,23 @@ private func expectInvalidPropertiesWhenDecodingProperties(_ data: Data) throws 
         _ = try JSONDecoder().decode(ProductAnalyticsProperties.self, from: data)
         Issue.record("Expected properties decoding to fail")
     } catch let error as ProductAnalyticsError {
+        guard case .invalidProperties = error else {
+            Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
+            return
+        }
+
         #expect(error.description.contains("Invalid product analytics properties:"))
     } catch {
         Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
     }
+}
+
+private func makeProperties(count: Int) -> [ProductAnalyticsPropertyKey: ProductAnalyticsPropertyValue] {
+    Dictionary(
+        uniqueKeysWithValues: (0..<count).map { index in
+            (ProductAnalyticsPropertyKey("key\(index)"), ProductAnalyticsPropertyValue.null)
+        }
+    )
 }
 
 private func nestedArrayValue(depth: Int) -> ProductAnalyticsPropertyValue {

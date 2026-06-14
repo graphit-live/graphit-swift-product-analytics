@@ -42,6 +42,19 @@ struct PropertyValueCodableTests {
         try expectDecoded("123", equals: .number(123))
     }
 
+    @Test("property value encoding accepts exact v1 limits")
+    func propertyValueEncodingAcceptsExactLimits() throws {
+        _ = try JSONEncoder().encode(ProductAnalyticsPropertyValue.string(String(repeating: "x", count: 8_192)))
+        _ = try JSONEncoder().encode(
+            ProductAnalyticsPropertyValue.array(Array(repeating: .null, count: 100))
+        )
+        _ = try JSONEncoder().encode(
+            ProductAnalyticsPropertyValue.object(try ProductAnalyticsProperties(makeProperties(count: 100)))
+        )
+        _ = try JSONEncoder().encode(nestedArray(depth: 8))
+        _ = try JSONEncoder().encode(try nestedObject(depth: 8))
+    }
+
     @Test("invalid enum-constructed property values fail during encoding")
     func invalidConstructedValuesFailDuringEncoding() throws {
         try expectInvalidPropertiesWhenEncoding(.number(.nan))
@@ -119,6 +132,11 @@ private func expectInvalidPropertiesWhenEncoding(_ value: ProductAnalyticsProper
         _ = try JSONEncoder().encode(value)
         Issue.record("Expected property value encoding to fail")
     } catch let error as ProductAnalyticsError {
+        guard case .invalidProperties = error else {
+            Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
+            return
+        }
+
         #expect(error.description.contains("Invalid product analytics properties:"))
     } catch {
         Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
@@ -130,10 +148,23 @@ private func expectInvalidPropertiesWhenDecoding(_ data: Data) throws {
         _ = try JSONDecoder().decode(ProductAnalyticsPropertyValue.self, from: data)
         Issue.record("Expected property value decoding to fail")
     } catch let error as ProductAnalyticsError {
+        guard case .invalidProperties = error else {
+            Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
+            return
+        }
+
         #expect(error.description.contains("Invalid product analytics properties:"))
     } catch {
         Issue.record("Expected ProductAnalyticsError.invalidProperties, received \(error)")
     }
+}
+
+private func makeProperties(count: Int) -> [ProductAnalyticsPropertyKey: ProductAnalyticsPropertyValue] {
+    Dictionary(
+        uniqueKeysWithValues: (0..<count).map { index in
+            (ProductAnalyticsPropertyKey("key\(index)"), ProductAnalyticsPropertyValue.null)
+        }
+    )
 }
 
 private func nestedArray(depth: Int) -> ProductAnalyticsPropertyValue {

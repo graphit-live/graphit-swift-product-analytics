@@ -12,6 +12,14 @@ struct BatchValidationTests {
         #expect(batch.events == [event])
     }
 
+    @Test("throwing array initializer accepts one event")
+    func throwingArrayInitializerAcceptsOneEvent() throws {
+        let event = try makeEvent(0)
+        let batch = try ProductAnalyticsBatch([event])
+
+        #expect(batch.events == [event])
+    }
+
     @Test("multi-event initializer preserves order")
     func multiEventInitializerPreservesOrder() throws {
         let first = try makeEvent(1)
@@ -22,6 +30,14 @@ struct BatchValidationTests {
 
         #expect(batch.events == [first, second, third])
         #expect(batch.events.map(\.name.rawValue) == ["event_1", "event_2", "event_3"])
+    }
+
+    @Test("exactly one thousand events are accepted")
+    func exactlyMaximumBatchCountIsAccepted() throws {
+        let event = try makeEvent(0)
+        let batch = try ProductAnalyticsBatch(Array(repeating: event, count: 1_000))
+
+        #expect(batch.events.count == 1_000)
     }
 
     @Test("empty batch is rejected")
@@ -55,6 +71,16 @@ struct BatchValidationTests {
 
         let decoded = try JSONDecoder().decode(ProductAnalyticsBatch.self, from: encoded)
         #expect(decoded == batch)
+    }
+
+    @Test("batch decoding accepts exactly one thousand events")
+    func batchDecodingAcceptsMaximumEventCount() throws {
+        let eventJSON = #"{"name":"event","occurredAt":0,"properties":{}}"#
+        let json = #"{"events":["# + Array(repeating: eventJSON, count: 1_000).joined(separator: ",") + "]}"
+
+        let decoded = try JSONDecoder().decode(ProductAnalyticsBatch.self, from: Data(json.utf8))
+
+        #expect(decoded.events.count == 1_000)
     }
 
     @Test("batch decoding rejects empty event arrays")

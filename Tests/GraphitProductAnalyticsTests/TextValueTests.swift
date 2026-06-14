@@ -1,5 +1,5 @@
 import Foundation
-@testable import GraphitProductAnalytics
+import GraphitProductAnalytics
 import Testing
 
 @Suite("TextValue")
@@ -57,16 +57,6 @@ struct TextValueTests {
 
         #expect(decodedEmpty.rawValue.isEmpty)
         #expect(decodedControl.rawValue == "signup\u{0000}completed")
-    }
-
-    @Test("validation helper detects Unicode control scalars")
-    func validationHelperDetectsControlScalars() {
-        #expect(ProductAnalyticsValidation.containsControlScalar("\u{0000}"))
-        #expect(ProductAnalyticsValidation.containsControlScalar("\u{001F}"))
-        #expect(ProductAnalyticsValidation.containsControlScalar("\u{007F}"))
-        #expect(ProductAnalyticsValidation.containsControlScalar("\u{0080}"))
-        #expect(ProductAnalyticsValidation.containsControlScalar("\u{009F}"))
-        #expect(!ProductAnalyticsValidation.containsControlScalar("signup_completed"))
     }
 
     @Test("property key stores raw value and description")
