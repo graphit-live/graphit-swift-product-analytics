@@ -21,7 +21,7 @@ Add the package URL to your Swift package or Xcode project:
 ```swift
 // Package.swift
 dependencies: [
-    .package(url: "https://github.com/graphit-live/graphit-swift-product-analytics.git", branch: "main")
+    .package(url: "https://github.com/graphit-live/graphit-swift-product-analytics.git", from: "0.1.0")
 ]
 ```
 
@@ -31,7 +31,7 @@ Then depend on the library product:
 .product(name: "GraphitProductAnalytics", package: "graphit-swift-product-analytics")
 ```
 
-For released apps, prefer a tagged version requirement once releases are published, using the version policy that matches your app.
+Use the repository URL with tagged releases for reproducible dependency resolution.
 
 ## What core v1 owns
 
